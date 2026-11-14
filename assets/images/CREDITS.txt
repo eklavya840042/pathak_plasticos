@@ -1,0 +1,30 @@
+PLASTICOS website — placeholder image credits
+=============================================
+The photographs currently in this folder are LICENSED PLACEHOLDER IMAGERY, not
+photographs of the PLASTICOS clinic, its team or its patients. Replace them with
+the clinic's own approved photography before the site goes live, keeping the same
+file names so no HTML changes are needed.
+
+Sources
+-------
+Unsplash (Unsplash License — free to use, attribution appreciated):
+  hero-theatre.webp, about-theatre.webp, service-hero-*.webp (liposuction,
+  gynecomastia, hair, beard, breast), gallery/g3.webp, gallery/g11.webp,
+  gallery/g4.webp, gallery/g5.webp, doctor-portrait.webp, gallery/g2.webp,
+  gallery/g7.webp, service-beard.webp, why-consult.webp,
+  service-mommy-makeover.webp, gallery/g8.webp, gallery/g6.webp,
+  why-clinic.webp, gallery/g9.webp, service-breast-surgery.webp,
+  gallery/g10.webp, og-image.jpg
+  https://unsplash.com/license
+
+Wikimedia Commons (CC BY 2.0):
+  service-prp.webp, service-hero-prp.webp, gallery/g12.webp
+  "Close-up of the testing tubes with microscope in a blurry background"
+  Source: https://commons.wikimedia.org/wiki/File:Close-up_of_the_testing_tubes_with_microscope_in_a_blurry_background.jpg
+  Licensed under CC BY 2.0 — attribution retained here as required.
+
+Brand mark
+----------
+logo.svg and favicon.svg are a temporary typographic monogram drawn for this
+build. Replace logo.svg with the client's original PLASTICOS logo file
+(transparent PNG/SVG, unmodified, original proportions) before publishing.

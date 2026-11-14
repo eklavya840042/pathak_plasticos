@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Admin / build artefacts — nothing private is served from here
+Disallow: /node_modules/
+
+Sitemap: https://pathakplasticos.com/sitemap.xml
