@@ -1,181 +1,118 @@
-/* ==========================================================================
-   PLASTICOS — main.js
-   Navigation, sticky header, reveal animations, accordions, utility actions
-   ========================================================================== */
+/* ============================================================
+   PLASTICOS - main.js
+   Handles: mobile menu, sticky header, scroll reveal,
+            FAQ accordion, back-to-top, year stamping
+   ============================================================ */
 (function () {
-  "use strict";
+  'use strict';
 
-  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  /* ---------------------------------------------------------------- Header */
-  var header = document.querySelector("[data-header]");
-
-  function onScroll() {
-    if (header) {
-      header.classList.toggle("is-stuck", window.scrollY > 8);
+  // ----- Mobile menu toggle -----
+  const hamburger = document.querySelector('.hamburger');
+  const mobileMenu = document.querySelector('.mobile-menu');
+  if (hamburger && mobileMenu) {
+    function closeMenu() {
+      hamburger.classList.remove('active');
+      mobileMenu.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
+      document.documentElement.classList.remove('menu-open');
     }
-    var toTop = document.querySelector("[data-back-to-top]");
-    if (toTop) {
-      toTop.classList.toggle("is-visible", window.scrollY > 520);
-    }
+    hamburger.addEventListener('click', function () {
+      const isOpen = hamburger.classList.toggle('active');
+      mobileMenu.classList.toggle('open', isOpen);
+      hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      // Locked on the root element (the page scroller) and scoped to the mobile
+      // breakpoint in CSS, so a resize cannot leave the page unscrollable.
+      document.documentElement.classList.toggle('menu-open', isOpen);
+    });
+    // Close menu when a link is clicked
+    mobileMenu.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', closeMenu);
+    });
+    // Close on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && mobileMenu.classList.contains('open')) closeMenu();
+    });
   }
 
-  window.addEventListener("scroll", onScroll, { passive: true });
+  // ----- Sticky header shadow on scroll -----
+  const header = document.querySelector('.header');
+  const backToTop = document.querySelector('.btn-top');
+  function onScroll() {
+    const y = window.scrollY || window.pageYOffset;
+    if (header) header.classList.toggle('scrolled', y > 8);
+    if (backToTop) backToTop.classList.toggle('visible', y > 600);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  /* ------------------------------------------------------------ Mobile nav */
-  var navToggle = document.querySelector("[data-nav-toggle]");
-  var mobileNav = document.querySelector("[data-mobile-nav]");
-  var navClose = document.querySelector("[data-nav-close]");
-  var lastFocused = null;
-
-  function openNav() {
-    if (!mobileNav) return;
-    lastFocused = document.activeElement;
-    mobileNav.classList.add("is-open");
-    mobileNav.removeAttribute("aria-hidden");
-    document.body.classList.add("nav-open");
-    if (navToggle) navToggle.setAttribute("aria-expanded", "true");
-    var first = mobileNav.querySelector("a, button");
-    if (first) first.focus();
-  }
-
-  function closeNav() {
-    if (!mobileNav) return;
-    mobileNav.classList.remove("is-open");
-    mobileNav.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("nav-open");
-    if (navToggle) navToggle.setAttribute("aria-expanded", "false");
-    if (lastFocused && typeof lastFocused.focus === "function") lastFocused.focus();
-  }
-
-  if (navToggle) {
-    navToggle.addEventListener("click", function () {
-      if (mobileNav && mobileNav.classList.contains("is-open")) {
-        closeNav();
-      } else {
-        openNav();
-      }
-    });
-  }
-
-  if (navClose) navClose.addEventListener("click", closeNav);
-
-  if (mobileNav) {
-    mobileNav.addEventListener("click", function (event) {
-      if (event.target.closest("a")) closeNav();
-    });
-  }
-
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && mobileNav && mobileNav.classList.contains("is-open")) {
-      closeNav();
-    }
-  });
-
-  window.addEventListener("resize", function () {
-    if (window.innerWidth > 980 && mobileNav && mobileNav.classList.contains("is-open")) {
-      closeNav();
-    }
-  });
-
-  /* -------------------------------------------------------- Scroll reveals */
-  var revealItems = document.querySelectorAll("[data-reveal]");
-
-  if (revealItems.length) {
-    if (reduceMotion || !("IntersectionObserver" in window)) {
-      revealItems.forEach(function (el) {
-        el.classList.add("is-visible");
-      });
-    } else {
-      var observer = new IntersectionObserver(
-        function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              entry.target.classList.add("is-visible");
-              observer.unobserve(entry.target);
-            }
-          });
-        },
-        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
-      );
-
-      revealItems.forEach(function (el, index) {
-        el.style.setProperty("--reveal-delay", Math.min(index % 4, 3) * 70 + "ms");
-        observer.observe(el);
-      });
-    }
-  }
-
-  /* -------------------------------------------------------------- Accordion */
-  document.querySelectorAll("[data-accordion]").forEach(function (accordion) {
-    var buttons = accordion.querySelectorAll(".faq__q");
-
-    buttons.forEach(function (button) {
-      button.addEventListener("click", function () {
-        var item = button.closest(".faq__item");
-        var isOpen = item.classList.contains("is-open");
-
-        if (accordion.hasAttribute("data-accordion-single")) {
-          buttons.forEach(function (other) {
-            if (other !== button) {
-              other.setAttribute("aria-expanded", "false");
-              other.closest(".faq__item").classList.remove("is-open");
-            }
-          });
-        }
-
-        item.classList.toggle("is-open", !isOpen);
-        button.setAttribute("aria-expanded", String(!isOpen));
-      });
-    });
-  });
-
-  /* ----------------------------------------------------------- Back to top */
-  var backToTop = document.querySelector("[data-back-to-top]");
+  // ----- Back to top -----
   if (backToTop) {
-    backToTop.addEventListener("click", function () {
-      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    backToTop.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
-  /* ------------------------------------------------------------ Footer year */
-  document.querySelectorAll("[data-year]").forEach(function (el) {
-    el.textContent = String(new Date().getFullYear());
-  });
-
-  /* ---------------------------------------------------- Conversion tracking */
-  function track(eventName, params) {
-    if (typeof window.gtag === "function") {
-      window.gtag("event", eventName, params || {});
-    }
-    if (window.dataLayer && Array.isArray(window.dataLayer)) {
-      window.dataLayer.push(Object.assign({ event: eventName }, params || {}));
-    }
+  // ----- Scroll reveal (IntersectionObserver) -----
+  const revealEls = document.querySelectorAll('.reveal');
+  if (revealEls.length && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+    revealEls.forEach(function (el) { io.observe(el); });
+  } else {
+    revealEls.forEach(function (el) { el.classList.add('visible'); });
   }
 
-  document.addEventListener("click", function (event) {
-    var link = event.target.closest("[data-track]");
-    if (!link) return;
-    track(link.getAttribute("data-track"), {
-      link_url: link.getAttribute("href") || "",
-      link_text: (link.textContent || "").trim().slice(0, 80)
+  // ----- FAQ accordion -----
+  const faqItems = document.querySelectorAll('.faq-item');
+  faqItems.forEach(function (item) {
+    const q = item.querySelector('.faq-question');
+    const a = item.querySelector('.faq-answer');
+    if (!q || !a) return;
+    q.setAttribute('aria-expanded', 'false');
+    q.addEventListener('click', function () {
+      const isOpen = item.classList.contains('open');
+      // Close all others
+      faqItems.forEach(function (other) {
+        if (other !== item) {
+          other.classList.remove('open');
+          const oq = other.querySelector('.faq-question');
+          const oa = other.querySelector('.faq-answer');
+          if (oq) oq.setAttribute('aria-expanded', 'false');
+          if (oa) oa.style.maxHeight = null;
+        }
+      });
+      // Toggle current
+      item.classList.toggle('open', !isOpen);
+      q.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+      a.style.maxHeight = !isOpen ? (a.scrollHeight + 'px') : null;
     });
   });
 
-  /* Expose for form.js / gallery.js */
-  window.PlasticosTrack = track;
+  // ----- Year stamping -----
+  document.querySelectorAll('[data-year]').forEach(function (el) {
+    el.textContent = new Date().getFullYear();
+  });
 
-  /* ------------------------------------------------- Smooth in-page anchors */
-  document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
-    anchor.addEventListener("click", function (event) {
-      var id = anchor.getAttribute("href");
-      if (!id || id === "#") return;
-      var target = document.querySelector(id);
-      if (!target) return;
-      event.preventDefault();
-      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-      if (history.replaceState) history.replaceState(null, "", id);
+  // ----- WhatsApp prefill on floating button -----
+  // (handled by href in markup)
+
+  // ----- Smooth anchor links (already CSS, but for older browsers) -----
+  document.querySelectorAll('a[href^="#"]:not([href="#"])').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      const id = a.getAttribute('href');
+      const target = document.querySelector(id);
+      if (target) {
+        e.preventDefault();
+        const offset = (header ? header.offsetHeight : 0) + 12;
+        const top = target.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+      }
     });
   });
 })();

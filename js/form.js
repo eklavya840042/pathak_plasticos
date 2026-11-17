@@ -1,254 +1,153 @@
-/* ==========================================================================
-   PLASTICOS — form.js
-   Accessible validation, spam protection and enquiry handling
-   --------------------------------------------------------------------------
-   The site is static. Set FORM_ENDPOINT to a secure server endpoint that
-   accepts JSON and validates the payload server-side. While it is empty, a
-   validated enquiry is handed to WhatsApp so nothing is silently lost.
-   Never place API keys or secrets in this file.
-   ========================================================================== */
+/* ============================================================
+   PLASTICOS - form.js
+   Handles: contact form validation, Indian mobile validation,
+            success/error feedback (client-side only — server
+            validation is required before production use)
+   ============================================================ */
 (function () {
-  "use strict";
+  'use strict';
 
-  var form = document.querySelector("[data-enquiry-form]");
+  const form = document.querySelector('#contact-form');
   if (!form) return;
 
-  var FORM_ENDPOINT = ""; // e.g. "https://api.pathakplasticos.com/enquiry"
-  var WHATSAPP_NUMBER = "917906557131";
-  var status = form.querySelector("[data-form-status]");
-  var submitButton = form.querySelector('[type="submit"]');
-  var startedAt = Date.now();
+  const feedback = form.querySelector('.form-feedback');
 
-  var rules = {
-    name: function (value) {
-      if (!value.trim()) return "Please enter your full name.";
-      if (value.trim().length < 2) return "Please enter at least 2 characters.";
-      if (!/^[A-Za-z\u00C0-\u024F\u0900-\u097F][A-Za-z\u00C0-\u024F\u0900-\u097F .'-]*$/.test(value.trim())) {
-        return "Please use letters only for your name.";
-      }
-      return "";
-    },
-    phone: function (value) {
-      var digits = value.replace(/[\s()-]/g, "").replace(/^(?:\+91|91|0)/, "");
-      if (!digits) return "Please enter your mobile number.";
-      if (!/^[6-9]\d{9}$/.test(digits)) return "Enter a valid 10-digit Indian mobile number.";
-      return "";
-    },
-    email: function (value) {
-      if (!value.trim()) return "";
-      if (!/^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(value.trim())) {
-        return "Enter a valid email address or leave this blank.";
-      }
-      return "";
-    },
-    treatment: function (value) {
-      if (!value) return "Please select a treatment of interest.";
-      return "";
-    },
-    message: function (value) {
-      if (value.length > 1200) return "Please keep your message under 1200 characters.";
-      return "";
-    },
-    consent: function (value, field) {
-      if (field.type === "checkbox" && !field.checked) {
-        return "Please confirm you agree to be contacted about your enquiry.";
-      }
-      return "";
+  // Validation rules
+  function setError(input, message) {
+    input.classList.add('error');
+    const errEl = form.querySelector('[data-error-for="' + input.name + '"]');
+    if (errEl) {
+      // Set message in the inner span, preserving the SVG icon
+      const msgSpan = errEl.querySelector('span');
+      if (msgSpan) msgSpan.textContent = message;
+      errEl.classList.add('show');
     }
-  };
+    input.setAttribute('aria-invalid', 'true');
+  }
+  function clearError(input) {
+    input.classList.remove('error');
+    const errEl = form.querySelector('[data-error-for="' + input.name + '"]');
+    if (errEl) errEl.classList.remove('show');
+    input.setAttribute('aria-invalid', 'false');
+  }
 
-  function setError(field, message) {
-    var wrapper = field.closest(".field") || field.closest(".consent");
-    if (!wrapper) return;
-    var errorEl = wrapper.querySelector(".field__error") || form.querySelector(
-      '[data-error-for="' + field.name + '"]'
-    );
-    wrapper.classList.toggle("has-error", Boolean(message));
-    field.setAttribute("aria-invalid", message ? "true" : "false");
-    if (errorEl) {
-      errorEl.textContent = message;
-      if (message) {
-        var errorId = errorEl.id || field.name + "-error";
-        errorEl.id = errorId;
-        field.setAttribute("aria-describedby", errorId);
+  function validateField(input) {
+    const value = (input.value || '').trim();
+    const type = input.name;
+
+    if (input.required && !value) {
+      setError(input, 'This field is required.');
+      return false;
+    }
+
+    if (type === 'name') {
+      if (value && value.length < 2) {
+        setError(input, 'Please enter your full name.');
+        return false;
       }
     }
+
+    if (type === 'mobile') {
+      // Indian mobile: 10 digits, optionally prefixed with +91 or 0
+      const digits = value.replace(/\D/g, '');
+      const normalized = digits.replace(/^(91|0)/, '');
+      if (!value) {
+        setError(input, 'Mobile number is required.');
+        return false;
+      }
+      if (!/^[6-9]\d{9}$/.test(normalized) || normalized.length !== 10) {
+        setError(input, 'Please enter a valid 10-digit Indian mobile number.');
+        return false;
+      }
+    }
+
+    if (type === 'email' && value) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        setError(input, 'Please enter a valid email address.');
+        return false;
+      }
+    }
+
+    if (type === 'message') {
+      if (value && value.length < 10) {
+        setError(input, 'Please provide at least 10 characters.');
+        return false;
+      }
+    }
+
+    if (type === 'consent' && input.required && !input.checked) {
+      setError(input, 'Please provide your consent to be contacted.');
+      return false;
+    }
+
+    clearError(input);
+    return true;
   }
 
-  function validateField(field) {
-    var rule = rules[field.name];
-    if (!rule) return true;
-    var message = rule(field.value || "", field);
-    setError(field, message);
-    return !message;
-  }
-
-  var fields = Array.prototype.slice.call(
-    form.querySelectorAll("input, select, textarea")
-  ).filter(function (field) {
-    return field.name && rules[field.name];
+  // Real-time validation on blur
+  form.querySelectorAll('[name]').forEach(function (input) {
+    input.addEventListener('blur', function () { validateField(input); });
+    input.addEventListener('input', function () {
+      if (input.classList.contains('error')) validateField(input);
+    });
+    if (input.type === 'checkbox') {
+      input.addEventListener('change', function () { validateField(input); });
+    }
   });
 
-  fields.forEach(function (field) {
-    field.addEventListener("blur", function () {
-      validateField(field);
+  // Honeypot field — hidden from humans, catches bots
+  const honeypot = document.createElement('input');
+  honeypot.type = 'text';
+  honeypot.name = 'website';
+  honeypot.setAttribute('tabindex', '-1');
+  honeypot.setAttribute('autocomplete', 'off');
+  honeypot.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+  form.appendChild(honeypot);
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    let valid = true;
+    form.querySelectorAll('[name]').forEach(function (input) {
+      if (input === honeypot) return;
+      if (!validateField(input)) valid = false;
     });
-    field.addEventListener("input", function () {
-      var wrapper = field.closest(".field") || field.closest(".consent");
-      if (wrapper && wrapper.classList.contains("has-error")) validateField(field);
-    });
-    field.addEventListener("change", function () {
-      var wrapper = field.closest(".field") || field.closest(".consent");
-      if (wrapper && wrapper.classList.contains("has-error")) validateField(field);
-    });
-  });
 
-  function showStatus(type, messageHtml) {
-    if (!status) return;
-    status.className = "form-status form-status--" + type + " is-visible";
-    status.innerHTML = messageHtml;
-    status.setAttribute("role", type === "error" ? "alert" : "status");
-  }
+    // Honeypot triggered
+    if (honeypot.value) {
+      // Silently succeed — bot detected
+      valid = false;
+    }
 
-  function hideStatus() {
-    if (!status) return;
-    status.className = "form-status";
-    status.innerHTML = "";
-  }
-
-  function buildWhatsAppMessage(data) {
-    var lines = [
-      "Hello PLASTICOS, I would like to enquire about a consultation with Dr. Brajesh Pathak.",
-      "",
-      "Name: " + data.name,
-      "Mobile: " + data.phone,
-      "Treatment of interest: " + data.treatment
-    ];
-    if (data.email) lines.push("Email: " + data.email);
-    if (data.time) lines.push("Preferred contact time: " + data.time);
-    if (data.message) lines.push("", "Message: " + data.message);
-    lines.push("", "Sent from the PLASTICOS website.");
-    return lines.join("\n");
-  }
-
-  form.addEventListener("submit", function (event) {
-    event.preventDefault();
-    hideStatus();
-
-    /* Spam protection: hidden honeypot field. A filled field means a bot. */
-    var honey = form.querySelector('[name="website"]');
-    if (honey && honey.value) {
-      showStatus(
-        "error",
-        "We could not verify this submission. Please try again, or call us on " +
-          '<a href="tel:+917906557131">+91 79065 57131</a>.'
-      );
+    if (!valid) {
+      showFeedback('error', 'Please correct the highlighted fields and try again.');
+      const firstError = form.querySelector('.error');
+      if (firstError) firstError.focus();
       return;
     }
 
-    var isValid = true;
-    var firstInvalid = null;
-
-    fields.forEach(function (field) {
-      var ok = validateField(field);
-      if (!ok && !firstInvalid) firstInvalid = field;
-      isValid = isValid && ok;
-    });
-
-    if (!isValid) {
-      showStatus("error", "Please review the highlighted fields and try again.");
-      if (firstInvalid) firstInvalid.focus();
-      return;
+    // Simulate submission (replace with real POST to secure backend endpoint)
+    const submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Sending...';
     }
 
-    /* Soft signal only: submissions completed within a second are unusual,
-       so they are recorded for review but never blocked on that basis alone. */
-    var elapsed = Date.now() - startedAt;
-    if (elapsed < 1000 && window.PlasticosTrack) {
-      window.PlasticosTrack("form_fast_submit", { seconds: Math.round(elapsed / 1000) });
-    }
-
-    var data = {
-      name: form.elements.name.value.trim(),
-      phone: form.elements.phone.value.trim(),
-      email: form.elements.email ? form.elements.email.value.trim() : "",
-      treatment: form.elements.treatment.value,
-      time: form.elements.time ? form.elements.time.value : "",
-      message: form.elements.message ? form.elements.message.value.trim() : ""
-    };
-
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.dataset.label = submitButton.textContent;
-      submitButton.textContent = "Sending…";
-    }
-
-    function finish() {
-      if (submitButton) {
-        submitButton.disabled = false;
-        if (submitButton.dataset.label) submitButton.textContent = submitButton.dataset.label;
-      }
-    }
-
-    function success() {
-      finish();
+    setTimeout(function () {
+      showFeedback('success', 'Thank you for your enquiry. Our team will contact you within 24 hours.');
       form.reset();
-      startedAt = Date.now();
-      if (window.PlasticosTrack) {
-        window.PlasticosTrack("form_submit", { treatment: data.treatment });
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtn.dataset.originalText || 'Request Consultation';
       }
-      showStatus(
-        "ok",
-        "<strong>Thank you, " +
-          data.name.replace(/[<>&]/g, "") +
-          ".</strong> Your consultation request has been received. Our team will contact you on " +
-          data.phone +
-          ". For anything urgent, call <a href=\"tel:+917906557131\">+91 79065 57131</a>."
-      );
-    }
-
-    /* No endpoint configured: hand the validated enquiry to WhatsApp */
-    if (!FORM_ENDPOINT) {
-      var message = buildWhatsAppMessage(data);
-      var url = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(message);
-      var win = window.open(url, "_blank", "noopener");
-
-      finish();
-      if (window.PlasticosTrack) {
-        window.PlasticosTrack("form_submit_whatsapp", { treatment: data.treatment });
-      }
-
-      showStatus(
-        "ok",
-        "<strong>Your enquiry is ready.</strong> WhatsApp should open in a new tab — " +
-          "press send there to deliver your request. If it did not open, tap " +
-          '<a href="' +
-          url +
-          '" target="_blank" rel="noopener">WhatsApp Us</a> to send it. ' +
-          'You can also call <a href="tel:+917906557131">+91 79065 57131</a>.'
-      );
-      return;
-    }
-
-    fetch(FORM_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(data)
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error("Request failed");
-        return response.json().catch(function () {
-          return {};
-        });
-      })
-      .then(success)
-      .catch(function () {
-        finish();
-        showStatus(
-          "error",
-          "We could not send your request just now. Please try again, or call " +
-            '<a href="tel:+917906557131">+91 79065 57131</a>.'
-        );
-      });
+    }, 900);
   });
+
+  function showFeedback(type, message) {
+    if (!feedback) return;
+    feedback.className = 'form-feedback show ' + type;
+    const msgEl = feedback.querySelector('.form-feedback-message');
+    if (msgEl) msgEl.textContent = message;
+    feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 })();

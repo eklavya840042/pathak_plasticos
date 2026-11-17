@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Light variant of PLASTICOS logo for dark backgrounds (footer) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80" role="img" aria-label="PLASTICOS logo">
+  <defs>
+    <linearGradient id="lg-grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C8464A"/>
+      <stop offset="100%" stop-color="#AF3236"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8,8)">
+    <path d="M32 4 C 42 14, 56 22, 56 36 C 56 50, 46 60, 32 60 C 18 60, 8 50, 8 36 C 8 22, 22 14, 32 4 Z"
+          fill="url(#lg-grad-light)"/>
+    <path d="M32 14 C 38 22, 46 28, 46 38 C 46 46, 40 52, 32 52 C 24 52, 18 46, 18 38 C 18 28, 26 22, 32 14 Z"
+          fill="#FFFFFF" opacity="0.92"/>
+    <circle cx="32" cy="36" r="5" fill="#AF3236"/>
+  </g>
+  <text x="80" y="42" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="2" fill="#FFFFFF">PLASTICOS</text>
+  <text x="82" y="62" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="10" font-weight="400" letter-spacing="3" fill="#F0ECEB">HAIR TRANSPLANT &amp; COSMETIC SURGERY</text>
+</svg>
